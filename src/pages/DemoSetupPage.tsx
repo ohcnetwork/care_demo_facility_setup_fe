@@ -6,6 +6,7 @@ import {
   PackagePlus,
   RefreshCw,
 } from "lucide-react";
+import { Link, navigate } from "raviger";
 import { useEffect, useMemo, useState } from "react";
 
 import { HttpError, query, request } from "@/lib/request";
@@ -26,7 +27,6 @@ export default function DemoSetupPage() {
   const queryClient = useQueryClient();
   const [packSlug, setPackSlug] = useState(DEFAULT_PACK);
   const [profileSlug, setProfileSlug] = useState(DEFAULT_PROFILE);
-  const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [validation, setValidation] = useState<ValidationResponse | null>(null);
 
   const seedPacksQuery = useQuery({
@@ -44,22 +44,6 @@ export default function DemoSetupPage() {
   const runsQuery = useQuery({
     queryKey: ["demoSetup", "runs"],
     queryFn: query(demoSetupApi.runs),
-  });
-
-  const activeRunQuery = useQuery({
-    queryKey: ["demoSetup", "run", activeRunId],
-    queryFn: query(demoSetupApi.runDetail, {
-      pathParams: { id: activeRunId ?? "" },
-    }),
-    enabled: !!activeRunId,
-    refetchInterval: (query) => {
-      const status = query.state.data?.status;
-      return status === "queued" ||
-        status === "running" ||
-        status === "validating"
-        ? 2000
-        : false;
-    },
   });
 
   useEffect(() => {
@@ -107,7 +91,6 @@ export default function DemoSetupPage() {
   });
 
   const handleRunCreated = (run: SeedRunSummary) => {
-    setActiveRunId(run.id);
     setValidation({
       valid: run.status !== "validation_failed",
       errors: run.error ? [run.error] : [],
@@ -116,6 +99,7 @@ export default function DemoSetupPage() {
     });
     queryClient.invalidateQueries({ queryKey: ["demoSetup", "runs"] });
     queryClient.invalidateQueries({ queryKey: ["demoSetup", "run", run.id] });
+    navigate(`/admin/demo-facility-setup/runs/${run.id}`);
   };
 
   const handleRunError = (error: Error) => {
@@ -166,7 +150,7 @@ export default function DemoSetupPage() {
 
   const createRealRun = () => {
     const confirmed = window.confirm(
-      "This will create one new demo facility and ten patients in CARE. Continue?",
+      "This will create one new demo facility, ten patients, departments, locations, and healthcare services in CARE. Continue?",
     );
     if (confirmed) {
       createRealRunMutation.mutate();
@@ -188,8 +172,9 @@ export default function DemoSetupPage() {
               </h1>
               <p className="mt-2 max-w-3xl text-sm text-gray-600">
                 Validate the packaged seed pack against the selected profile,
-                then create an auditable run. Milestone 1 creates one facility
-                and ten patients through CARE's own APIs.
+                then create an auditable run. The current milestone creates one
+                facility, ten patients, and the facility foundation through
+                CARE's own APIs.
               </p>
             </div>
             <Button
@@ -280,7 +265,7 @@ export default function DemoSetupPage() {
                 {createRealRunMutation.isPending && (
                   <Loader2 className="size-4 animate-spin" />
                 )}
-                Create facility + patients
+                Create demo facility
               </Button>
             </div>
 
@@ -329,8 +314,6 @@ export default function DemoSetupPage() {
           </aside>
         </section>
 
-        {activeRunQuery.data && <RunDetailPanel run={activeRunQuery.data} />}
-
         <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold">Recent seed runs</h2>
           <div className="mt-4 overflow-hidden rounded-xl border border-gray-200">
@@ -364,12 +347,12 @@ export default function DemoSetupPage() {
                       {run.dry_run ? "Dry run" : "Apply"}
                     </td>
                     <td className="px-4 py-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setActiveRunId(run.id)}
-                      >
-                        Details
+                      <Button variant="outline" size="sm" asChild>
+                        <Link
+                          href={`/admin/demo-facility-setup/runs/${run.id}`}
+                        >
+                          View details
+                        </Link>
                       </Button>
                     </td>
                   </tr>
@@ -391,115 +374,6 @@ export default function DemoSetupPage() {
       </div>
     </div>
   );
-}
-
-function RunDetailPanel({ run }: { run: SeedRunSummary }) {
-  const facilityArtifacts =
-    run.artifacts?.filter(
-      (artifact) => artifact.resource_type === "Facility",
-    ) ?? [];
-  const patientArtifacts =
-    run.artifacts?.filter((artifact) => artifact.resource_type === "Patient") ??
-    [];
-
-  return (
-    <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">Run details</h2>
-          <p className="mt-1 text-sm text-gray-600">
-            {run.pack_slug} / {run.profile_slug}
-          </p>
-        </div>
-        <StatusPill status={run.status} />
-      </div>
-
-      <div className="mt-5 grid gap-4 md:grid-cols-3">
-        <SummaryCard label="Mode" value={run.dry_run ? "Dry run" : "Apply"} />
-        <SummaryCard label="Facilities" value={facilityArtifacts.length} />
-        <SummaryCard label="Patients" value={patientArtifacts.length} />
-      </div>
-
-      {!!run.steps?.length && (
-        <div className="mt-6">
-          <h3 className="text-sm font-semibold text-gray-900">Steps</h3>
-          <div className="mt-3 grid gap-3 md:grid-cols-3">
-            {run.steps.map((step) => (
-              <div
-                key={step.id}
-                className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-medium text-gray-900">{step.title}</p>
-                  <StatusPill status={step.status} />
-                </div>
-                {step.message && (
-                  <p className="mt-2 text-gray-600">{step.message}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {!!run.artifacts?.length && (
-        <div className="mt-6">
-          <h3 className="text-sm font-semibold text-gray-900">
-            Created resources
-          </h3>
-          <div className="mt-3 overflow-hidden rounded-xl border border-gray-200">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                <tr>
-                  <th className="px-4 py-3">Ref</th>
-                  <th className="px-4 py-3">Type</th>
-                  <th className="px-4 py-3">Name</th>
-                  <th className="px-4 py-3">External ID</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {run.artifacts.map((artifact) => (
-                  <tr key={artifact.id}>
-                    <td className="px-4 py-3 font-medium text-gray-900">
-                      {artifact.ref}
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">
-                      {artifact.resource_type}
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">
-                      {getArtifactName(artifact.payload)}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-gray-600">
-                      {artifact.resource_external_id ?? "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </section>
-  );
-}
-
-function SummaryCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
-  return (
-    <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-      <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
-      <p className="mt-1 text-xl font-semibold text-gray-900">{value}</p>
-    </div>
-  );
-}
-
-function getArtifactName(payload: Record<string, unknown>) {
-  return typeof payload.name === "string" ? payload.name : "—";
 }
 
 function ValidationPanel({ validation }: { validation: ValidationResponse }) {
