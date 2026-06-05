@@ -70,25 +70,6 @@ function RunDetailPanel({ run }: { run: SeedRunSummary }) {
   const facilityName = facilityArtifact
     ? getArtifactName(facilityArtifact.payload)
     : null;
-  const facilityArtifacts =
-    run.artifacts?.filter(
-      (artifact) => artifact.resource_type === "Facility",
-    ) ?? [];
-  const patientArtifacts =
-    run.artifacts?.filter((artifact) => artifact.resource_type === "Patient") ??
-    [];
-  const departmentArtifacts =
-    run.artifacts?.filter(
-      (artifact) => artifact.resource_type === "FacilityOrganization",
-    ) ?? [];
-  const locationArtifacts =
-    run.artifacts?.filter(
-      (artifact) => artifact.resource_type === "FacilityLocation",
-    ) ?? [];
-  const healthcareServiceArtifacts =
-    run.artifacts?.filter(
-      (artifact) => artifact.resource_type === "HealthcareService",
-    ) ?? [];
 
   return (
     <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -122,16 +103,8 @@ function RunDetailPanel({ run }: { run: SeedRunSummary }) {
         </div>
       )}
 
-      <div className="mt-5 grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+      <div className="mt-5 w-fit">
         <SummaryCard label="Mode" value={run.dry_run ? "Dry run" : "Apply"} />
-        <SummaryCard label="Facilities" value={facilityArtifacts.length} />
-        <SummaryCard label="Patients" value={patientArtifacts.length} />
-        <SummaryCard label="Departments" value={departmentArtifacts.length} />
-        <SummaryCard label="Locations" value={locationArtifacts.length} />
-        <SummaryCard
-          label="Services"
-          value={healthcareServiceArtifacts.length}
-        />
       </div>
 
       {!!run.steps?.length && (

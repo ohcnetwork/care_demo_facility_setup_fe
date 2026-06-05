@@ -150,7 +150,7 @@ export default function DemoSetupPage() {
 
   const createRealRun = () => {
     const confirmed = window.confirm(
-      "This will create one new demo facility, ten patients, departments, locations, and healthcare services in CARE. Continue?",
+      "This will create a new demo facility in CARE, along with its patients, departments, locations, healthcare services, and catalog (lab tests, specimens, observations, charge items, and inventory). Continue?",
     );
     if (confirmed) {
       createRealRunMutation.mutate();
@@ -172,8 +172,9 @@ export default function DemoSetupPage() {
               </h1>
               <p className="mt-2 max-w-3xl text-sm text-gray-600">
                 Validate the packaged seed pack against the selected profile,
-                then create an auditable run. The current milestone creates one
-                facility, ten patients, and the facility foundation through
+                then create an auditable run. Each run provisions a demo
+                facility and its full catalog — patients, foundation, lab tests,
+                specimens, observations, charge items, and inventory — through
                 CARE's own APIs.
               </p>
             </div>
@@ -223,12 +224,6 @@ export default function DemoSetupPage() {
                   ))}
                 </select>
               </label>
-
-              <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900 md:col-span-2">
-                The selected profile controls where this seed can run. CARE host
-                validation uses the backend request host, so admins do not need
-                to enter a CARE API URL.
-              </div>
             </div>
 
             <div className="mt-5 flex flex-wrap gap-3">
